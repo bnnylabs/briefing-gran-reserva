@@ -115,6 +115,8 @@
   @keyframes draw{to{stroke-dashoffset:0}}
   #done h2{color:#fff;font-size:26px;font-weight:800;margin-bottom:10px}
   #done p{color:#c9cdd0;font-weight:300;max-width:44ch}
+  #done .back{margin-top:24px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:12px 22px;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;transition:.15s var(--ease)}
+  #done .back:hover{background:rgba(255,255,255,.16)}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:.25s var(--ease);z-index:80}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -323,7 +325,8 @@
 <div id="done">
   <div class="ring"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5 11-11"/></svg></div>
   <h2>Recebemos! ✓</h2>
-  <p>Obrigado. Seu briefing foi enviado para a equipe da Lurie Labs. Entraremos em contato em breve.</p>
+  <p>Obrigado! Recebemos seu briefing. Se precisar mudar algo, é só voltar, editar e reenviar.</p>
+  <button class="back" id="doneClose">Voltar ao formulário</button>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -435,7 +438,7 @@
     el.addEventListener('input',function(){
       var f=el.closest('.field');
       if((el.value||'').trim()!=='') f.classList.add('done'); else f.classList.remove('done');
-      badge(el); grow(el); maybeStart();
+      badge(el); grow(el); maybeStart(); markEditable();
       scheduleSave();
     });
   });
@@ -452,16 +455,23 @@
   remoteSave('rascunho').catch(function(){});
 
   // ---- finish ----
-  document.getElementById('finish').addEventListener('click',function(){
-    var btn=this; btn.disabled=true; btn.textContent='Enviando…';
+  var _doneKey='lurie_done_'+SID;
+  var finishBtn=document.getElementById('finish');
+  var _concluded=false;
+  try{ if(localStorage.getItem(_doneKey)){ _concluded=true; finishBtn.disabled=true; finishBtn.textContent='Concluído ✓'; } }catch(e){}
+  function markEditable(){ if(_concluded){ finishBtn.disabled=false; finishBtn.textContent='Reenviar atualização →'; } }
+  finishBtn.addEventListener('click',function(){
+    var btn=this, isUpdate=_concluded; btn.disabled=true; btn.textContent='Enviando…';
     remoteSave('concluido').catch(function(){});
     var sections=collectSections();
-    makePdf(sections).then(function(pdf){
-      return notify({type:'concluido',empreendimento:empName(),sections:sections,pdf:pdf});
-    }).catch(function(){}).then(function(){
-      document.getElementById('done').classList.add('show');
-    });
+    makePdf(sections).then(function(pdf){ return notify({type:'concluido',empreendimento:empName(),sections:sections,pdf:pdf,updated:isUpdate}); })
+      .catch(function(){}).then(function(){
+        try{ localStorage.setItem(_doneKey,'1'); }catch(e){}
+        _concluded=true; btn.disabled=true; btn.textContent='Concluído ✓';
+        document.getElementById('done').classList.add('show');
+      });
   });
+  var _dc=document.getElementById('doneClose'); if(_dc) _dc.addEventListener('click',function(){ document.getElementById('done').classList.remove('show'); });
 
   function toast(m){ var e=document.getElementById('toast'); e.textContent=m; e.classList.add('show'); clearTimeout(e._t); e._t=setTimeout(function(){e.classList.remove('show');},3000); }
   if(!sb){ document.getElementById('saveInfo').textContent='Modo prévia — o banco de dados será conectado na publicação.'; }
