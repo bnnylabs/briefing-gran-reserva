@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
         + '<p>Um cliente <b>comecou a preencher</b> o briefing de <b>' + esc(emp) + '</b>.</p>'
         + '<p style="color:#6b6f76;font-size:13px">As respostas ja estao sendo salvas no Supabase. Voce recebe o resumo completo + PDF quando ele concluir.</p></div>';
     } else {
-      payload.subject = 'Briefing concluido - ' + emp;
+      payload.subject = (b.updated ? 'Briefing ATUALIZADO - ' : 'Briefing concluido - ') + emp;
       const sections = Array.isArray(b.sections) ? b.sections : [];
       let rows = '';
       for (const s of sections) {
@@ -37,6 +37,7 @@ module.exports = async (req, res) => {
       }
       payload.html = '<div style="font-family:Arial,sans-serif;color:#1b1c1e;max-width:680px">'
         + '<div style="border-bottom:3px solid #00d452;padding-bottom:10px;margin-bottom:8px">'
+        + (b.updated ? '<div style="display:inline-block;background:#e8a13a;color:#1b1c1e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;margin-bottom:6px">ATUALIZACAO</div>' : '')
         + '<div style="font-size:11px;letter-spacing:2px;color:#5849f1;font-weight:700">LURIE LABS - BRIEFING CONCLUIDO</div>'
         + '<div style="font-size:22px;font-weight:800;margin-top:4px">' + esc(emp) + '</div></div>'
         + '<table style="border-collapse:collapse;width:100%">' + rows + '</table>'
