@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
 <style>
   :root{
     --ink:#1b1c1e;--ink2:#2b2d30;--gray:#6b6f76;--line:#e7e8ea;
@@ -347,6 +348,23 @@
   var fields=Array.prototype.slice.call(document.querySelectorAll('[data-label]'));
   fields.forEach(function(el){ if(el.tagName==='SELECT')return; var w=document.createElement('span'); w.className='ctrl'; el.parentNode.insertBefore(w,el); w.appendChild(el); });
 
+  // ---- notifications (e-mail + PDF via /api/notify) ----
+  function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function empName(){ var n=(document.getElementById('f_nome').value||'').trim(); return n||'Gran Reserva'; }
+  function notify(body){ try{ return fetch('/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }catch(e){ return Promise.resolve(); } }
+  var _started=false; try{ if(localStorage.getItem('lurie_started_'+SID)) _started=true; }catch(e){}
+  function maybeStart(){ if(_started)return; _started=true; try{localStorage.setItem('lurie_started_'+SID,'1');}catch(e){} notify({type:'inicio',empreendimento:empName()}); }
+  function collectSections(){ var out=[]; document.querySelectorAll('section[data-section]').forEach(function(sec){ var rows=[]; sec.querySelectorAll('[data-label]').forEach(function(el){ rows.push({label:el.getAttribute('data-label'),value:(el.value||'').trim()}); }); out.push({title:sec.getAttribute('data-section'),rows:rows}); }); return out; }
+  function makePdf(sections){
+    if(typeof html2pdf==='undefined') return Promise.resolve(null);
+    var el=document.createElement('div'); el.style.cssText='position:absolute;left:-9999px;top:0;width:760px;padding:36px;font-family:Inter,Arial,sans-serif;color:#1b1c1e;background:#fff';
+    var g='<div style="border-bottom:3px solid #00d452;padding-bottom:12px;margin-bottom:18px"><div style="font-size:11px;letter-spacing:2px;color:#5849f1;font-weight:700">LURIE LABS &middot; BRIEFING</div><div style="font-size:24px;font-weight:800;margin-top:6px">'+esc(empName())+'</div></div>';
+    sections.forEach(function(s){ g+='<div style="font-size:14px;font-weight:700;color:#1f1c4a;margin:16px 0 6px">'+esc(s.title)+'</div>'; s.rows.forEach(function(r){ g+='<div style="margin:0 0 8px"><div style="font-size:10px;color:#6b6f76;font-weight:600;text-transform:uppercase;letter-spacing:.03em">'+esc(r.label)+'</div><div style="font-size:12.5px;white-space:pre-wrap;line-height:1.4">'+(esc(r.value)||'&mdash;')+'</div></div>'; }); });
+    el.innerHTML=g; document.body.appendChild(el);
+    var opt={margin:10,image:{type:'jpeg',quality:.92},html2canvas:{scale:1.5,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};
+    return html2pdf().set(opt).from(el).outputPdf('datauristring').then(function(uri){ try{document.body.removeChild(el);}catch(e){} return (uri||'').split(',')[1]||null; }).catch(function(){ try{document.body.removeChild(el);}catch(e){} return null; });
+  }
+
   // ---- prefill + restore (by label) + badges ----
   function badge(el){
     var f=el.closest('.field'), label=f.querySelector('label'), ex=label.querySelector('.badge'), val=(el.value||'').trim();
@@ -417,7 +435,7 @@
     el.addEventListener('input',function(){
       var f=el.closest('.field');
       if((el.value||'').trim()!=='') f.classList.add('done'); else f.classList.remove('done');
-      badge(el); grow(el);
+      badge(el); grow(el); maybeStart();
       scheduleSave();
     });
   });
@@ -436,9 +454,11 @@
   // ---- finish ----
   document.getElementById('finish').addEventListener('click',function(){
     var btn=this; btn.disabled=true; btn.textContent='Enviando…';
-    remoteSave('concluido').then(function(){
-      document.getElementById('done').classList.add('show');
-    }).catch(function(){
+    remoteSave('concluido').catch(function(){});
+    var sections=collectSections();
+    makePdf(sections).then(function(pdf){
+      return notify({type:'concluido',empreendimento:empName(),sections:sections,pdf:pdf});
+    }).catch(function(){}).then(function(){
       document.getElementById('done').classList.add('show');
     });
   });
