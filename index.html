@@ -148,7 +148,7 @@
   <section class="card" data-section="1. Sobre o empreendimento">
     <div class="sec-head"><div class="num">1</div><h2>Sobre o empreendimento</h2></div>
     <p class="sec-desc">O básico para nos situarmos.</p>
-    <div class="field"><label>Nome oficial do empreendimento</label><textarea id="f_nome" data-label="Nome oficial" data-pre="Gran Reserva – Condomínio Residencial"></textarea></div>
+    <div class="field"><label>Nome oficial do empreendimento</label><textarea id="f_nome" data-label="Nome oficial" data-pre="Gran Reserva"></textarea></div>
     <div class="field"><label>Tipo de produto</label><textarea data-label="Tipo de produto" data-pre="Condomínio residencial de alto padrão (lotes)"></textarea></div>
     <div class="field"><label>Incorporadora</label><textarea data-label="Incorporadora" data-pre="B2B Empreendimentos"></textarea></div>
     <div class="field"><label>O que torna o empreendimento especial?</label><textarea data-label="O que o torna especial" data-pre="Refúgio campestre sofisticado de alto padrão a 2 km do centro de Brusque; lotes amplos e exclusivos, com conceito inspirado nos grandes rótulos de vinho (exclusividade e legado familiar)."></textarea></div>
@@ -382,7 +382,7 @@
   }
   fields.forEach(function(el){ el._pre=el.getAttribute('data-pre')||''; el._label=el.getAttribute('data-label'); if(el._pre) el.value=el._pre; if(el.tagName==='TEXTAREA') el.closest('.field').classList.add('ta'); });
   try{
-    var saved=JSON.parse(localStorage.getItem('lurie_v2_'+SID)||'{}');
+    var saved=JSON.parse(localStorage.getItem('lurie_v3_'+SID)||'{}');
     fields.forEach(function(el){ var v=saved[el._label]; if(typeof v==='string' && v.trim()!=='') el.value=v; });
   }catch(e){}
   fields.forEach(function(el){ badge(el); if((el.value||'').trim()!=='') el.closest('.field').classList.add('done'); });
@@ -424,7 +424,7 @@
     var d={}; fields.forEach(function(el){ d[el.getAttribute('data-label')]=el.value; });
     return d;
   }
-  function localSave(){ try{ var o={}; fields.forEach(function(el){o[el._label]=el.value;}); localStorage.setItem('lurie_v2_'+SID,JSON.stringify(o)); }catch(e){} }
+  function localSave(){ try{ var o={}; fields.forEach(function(el){o[el._label]=el.value;}); localStorage.setItem('lurie_v3_'+SID,JSON.stringify(o)); }catch(e){} }
   function remoteSave(status){
     if(!sb) return Promise.resolve();
     var nome=(document.getElementById('f_nome').value||'').trim();
